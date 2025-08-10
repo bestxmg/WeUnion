@@ -1,0 +1,17 @@
+{
+  "short_name": "WeChat",
+  "name": "WeChat-like Messaging App",
+  "description": "A privacy-focused messaging application inspired by WeChat",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1AAD19",
+  "background_color": "#f7f7f7",
+  "orientation": "portrait"
+}

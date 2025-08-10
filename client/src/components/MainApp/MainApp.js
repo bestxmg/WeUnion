@@ -28,6 +28,7 @@ import ChatList from '../Chat/ChatList';
 import ChatRoom from '../Chat/ChatRoom';
 import ContactList from '../Contacts/ContactList';
 import MomentsFeed from '../Moments/MomentsFeed';
+import StartChatDialog from '../Chat/StartChatDialog';
 
 const MainApp = () => {
   const location = useLocation();
@@ -41,6 +42,7 @@ const MainApp = () => {
     return 0;
   });
   const [menuAnchor, setMenuAnchor] = useState(null);
+  const [startChatOpen, setStartChatOpen] = useState(false);
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -89,6 +91,13 @@ const MainApp = () => {
 
   const showBackButton = location.pathname.startsWith('/chat/');
 
+  const handleStartChat = (conversationId) => {
+    setStartChatOpen(false);
+    if (conversationId) {
+      navigate(`/chat/${conversationId}`);
+    }
+  };
+
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* App Bar */}
@@ -115,7 +124,7 @@ const MainApp = () => {
                 <Search />
               </IconButton>
               
-              <IconButton color="inherit" sx={{ mr: 1 }}>
+              <IconButton color="inherit" sx={{ mr: 1 }} onClick={() => setStartChatOpen(true)}>
                 <Add />
               </IconButton>
             </>
@@ -165,6 +174,12 @@ const MainApp = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Box>
+
+      <StartChatDialog
+        open={startChatOpen}
+        onClose={() => setStartChatOpen(false)}
+        onStarted={handleStartChat}
+      />
 
       {/* Bottom Navigation */}
       {!showBackButton && (
