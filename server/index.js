@@ -16,29 +16,43 @@ const momentRoutes = require('./routes/moments');
 const socketHandler = require('./socket/socketHandler');
 
 const app = express();
+
+// Helper: determine if origin is allowed
+function isOriginAllowed(origin) {
+  if (!origin) return true; // allow requests without origin
+
+  const allowAll = (process.env.ALLOW_ALL_ORIGINS || '').toLowerCase() === 'true';
+  if (allowAll) return true;
+
+  const allowedOriginsEnv = (process.env.ALLOWED_ORIGINS || '').trim();
+  if (allowedOriginsEnv) {
+    const allowedOrigins = allowedOriginsEnv.split(',').map(s => s.trim()).filter(Boolean);
+    if (allowedOrigins.includes('*')) return true;
+    if (allowedOrigins.includes(origin)) return true;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    // Development: allow localhost, local networks, and common tunnels (ngrok)
+    const allowedPatterns = [
+      /^http:\/\/localhost:\d+$/,
+      /^http:\/\/127\.0\.0\.1:\d+$/,
+      /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
+      /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
+      /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:\d+$/,
+      /^https?:\/\/[a-z0-9-]+\.ngrok(-free)?\.app(?::\d+)?$/
+    ];
+    return allowedPatterns.some(pattern => pattern.test(origin));
+  }
+
+  return false;
+}
+
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: function (origin, callback) {
-      // Allow requests with no origin
-      if (!origin) return callback(null, true);
-      
-      if (process.env.NODE_ENV === 'production') {
-        const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',');
-        return callback(null, allowedOrigins.indexOf(origin) !== -1);
-      } else {
-        // In development, allow localhost and local network IPs
-        const allowedPatterns = [
-          /^http:\/\/localhost:\d+$/,
-          /^http:\/\/127\.0\.0\.1:\d+$/,
-          /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
-          /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
-          /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:\d+$/
-        ];
-        
-        const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
-        return callback(null, isAllowed);
-      }
+      const allowed = isOriginAllowed(origin);
+      return callback(null, allowed);
     },
     methods: ['GET', 'POST'],
     credentials: true
@@ -71,33 +85,11 @@ app.use('/api/', limiter);
 // CORS configuration
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (process.env.NODE_ENV === 'production') {
-      // In production, only allow specific origins
-      const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',');
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        return callback(null, true);
-      } else {
-        return callback(new Error('Not allowed by CORS'));
-      }
+    const allowed = isOriginAllowed(origin);
+    if (allowed) {
+      return callback(null, true);
     } else {
-      // In development, allow localhost and local network IPs
-      const allowedPatterns = [
-        /^http:\/\/localhost:\d+$/,
-        /^http:\/\/127\.0\.0\.1:\d+$/,
-        /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
-        /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
-        /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:\d+$/
-      ];
-      
-      const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
-      if (isAllowed) {
-        return callback(null, true);
-      } else {
-        return callback(new Error('Not allowed by CORS'));
-      }
+      return callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true
@@ -150,4 +142,9 @@ server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`💾 Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+  if ((process.env.ALLOW_ALL_ORIGINS || '').toLowerCase() === 'true') {
+    console.log('🌍 CORS: Allowing all origins (ALLOW_ALL_ORIGINS=true)');
+  } else {
+    console.log(`🌍 CORS: Allowed origins: ${process.env.ALLOWED_ORIGINS || 'development defaults'}`);
+  }
 });
