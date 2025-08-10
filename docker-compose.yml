@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: wechat_postgres
+    environment:
+      POSTGRES_DB: wechat_db
+      POSTGRES_USER: wechat_user
+      POSTGRES_PASSWORD: wechat_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - wechat_network
+
+  wechat_app:
+    build: .
+    container_name: wechat_app
+    ports:
+      - "3000:3000"
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=wechat_db
+      - DB_USER=wechat_user
+      - DB_PASSWORD=wechat_password
+      - JWT_SECRET=your_super_secret_jwt_key_change_in_production
+    depends_on:
+      - postgres
+    networks:
+      - wechat_network
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  postgres_data:
+
+networks:
+  wechat_network:
+    driver: bridge
