@@ -4,125 +4,125 @@ A real-time chat application inspired by WeChat, built with React, Node.js, and 
 
 ## ✨ Features
 
-- **Real-time messaging** with Socket.IO
-- **User authentication** with JWT
-- **Contact management** (search users, friend requests)
-- **Group chats** and direct messages
-- **File/image sharing**
-- **Moments/Timeline** feature
-- **User profiles** with avatars
+- Real-time messaging with Socket.IO
+- User authentication with JWT
+- Contact management (search users, friend requests)
+- Group chats and direct messages
+- File/image sharing
+- Moments/Timeline feature
+- User profiles with avatars
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Local Dev)
 
 ```bash
-# 1. Clone and setup
-git clone <your-repo> && cd wechat-app
+# 1) Clone & enter
+git clone <your-repo>
+cd wechat-app
 
-# 2. Setup environment (interactive script)
-./setup.sh
-
-# 3. Install dependencies
-npm install && cd client && npm install && cd ..
-
-# 4. Start PostgreSQL (ensure running on port 5432)
-
-# 5. Start development servers
-npm run dev        # Starts both backend and frontend
-```
-
-## 📋 Setup & Run
-
-### 1. **Environment Setup**
-Run the interactive setup script:
-```bash
+# 2) Setup (creates client/.env)
 chmod +x setup.sh
 ./setup.sh
+
+# 3) Install deps
+npm install && cd client && npm install && cd ..
+
+# 4) Start DB (ensure PostgreSQL on 5432)
+# docker-compose up -d postgres  # optional
+
+# 5) Run
+npm run dev  # server:5000 + client:3000
 ```
 
-### 2. **Database Setup**
-- Ensure PostgreSQL is running (local or Docker)
-- Update `.env` with your database credentials:
+## 🌍 Public Deployment (Internet users)
+
+You can expose the app to the internet in two simple ways.
+
+### Option A: ngrok (fastest)
+
+1) Start backend (bind to 0.0.0.0 if remote):
 ```bash
-DB_HOST=localhost          # or your Docker machine IP
+NODE_ENV=production ALLOW_ALL_ORIGINS=true npm start
+# or for dev: npm run server
+```
+
+2) Start frontend (point to public API):
+- Set `client/.env`:
+```
+REACT_APP_API_URL=https://<your-ngrok-subdomain>.ngrok-free.app
+```
+- Then run:
+```bash
+cd client
+npm start
+```
+
+3) Expose your backend with ngrok:
+```bash
+ngrok http 5000
+# copy the HTTPS URL, e.g. https://abcd-12-34-56-78.ngrok-free.app
+```
+
+Notes:
+- Backend CORS/Socket.IO will allow all origins when `ALLOW_ALL_ORIGINS=true`.
+- For a tighter config, set `ALLOWED_ORIGINS=https://<your-ngrok>.ngrok-free.app` on the server.
+
+### Option B: Docker (single host)
+
+```bash
+docker-compose up -d
+# App will be at http://<host-ip>:3000, API at http://<host-ip>:5000
+# docker-compose sets ALLOW_ALL_ORIGINS=true for public/demo access
+```
+
+If you want to host the frontend only (static hosting) and point it to a remote API:
+- Build client: `cd client && npm run build`
+- Serve `client/build` via any static host, and set `REACT_APP_API_URL` during build if needed
+
+## 🔧 Environment
+
+Server `.env` (see `.env.example`):
+```
+PORT=5000
+DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=wechat_db
 DB_USER=wechat_user
 DB_PASSWORD=wechat_password
+JWT_SECRET=change_me
+# CORS
+ALLOW_ALL_ORIGINS=false
+ALLOWED_ORIGINS=
 ```
 
-### 3. **Install Dependencies**
-```bash
-npm install
-cd client && npm install && cd ..
+Client `.env` (see `client/.env.example`):
+```
+REACT_APP_API_URL=http://<server-host>:5000
 ```
 
-### 4. **Start Development**
-```bash
-npm run dev    # Starts both backend (port 5000) and frontend (port 3000)
-```
+## 📋 Database Setup
 
-### 5. **Production Deployment**
-```bash
-chmod +x deploy.sh
-./deploy.sh    # Docker deployment
-```
+- Ensure PostgreSQL is running (local or Docker)
+- Initialize schema if needed: `psql -d wechat_db -f database/init.sql`
+
+## 🧪 Development Tips
+
+- If exposing over LAN, start client with: `HOST=0.0.0.0 npm start`
+- The app auto-detects backend URL unless `REACT_APP_API_URL` is set
+- Socket reconnection and rate limits are tuned for dev
 
 ## 🔧 Troubleshooting
 
-### **Connection Loop Issues** ✅ **FIXED**
-- **Problem**: Rapid Socket.IO connect/disconnect cycles
-- **Solution**: Improved connection management with cooldowns and better cleanup
-- **Signs**: Excessive "User connected/disconnected" logs
-
-### **CORS Errors** ✅ **FIXED**
-- **Problem**: `Access to XMLHttpRequest blocked by CORS policy`
-- **Solution**: Auto-detection of local network IPs in development
-- **Config**: Frontend auto-detects backend URL or uses `REACT_APP_API_URL`
-
-### **Rate Limiting (429 errors)** ✅ **FIXED**
-- **Problem**: `Too Many Requests` errors
-- **Solution**: Relaxed rate limits for development and local IPs
-- **Limits**: 1000 requests/15min in development, 100 in production
-
-### **Add Contact Feature Not Working** ✅ **FIXED**
-- **Problem**: Missing user search and friend request functionality
-- **Solution**: Complete contacts management system implemented
-- **Features**: Search users, send/accept/decline friend requests, manage contacts
-
-### **PostgreSQL JSON Query Error** ✅ **FIXED**
-- **Error**: `could not identify an equality operator for type json`
-- **Solution**: Refactored queries to avoid JSON comparisons in ORDER BY clauses
-- **Affected**: Conversations, messages, groups, moments queries
-
-### **Missing manifest.json** ✅ **FIXED**
-- **Problem**: `404 Not Found` for manifest.json
-- **Solution**: Created proper web app manifest file
-
-### **Remote PostgreSQL Setup**
-If using PostgreSQL on another machine:
-1. Update `DB_HOST` in `.env` to your PostgreSQL machine IP
-2. Ensure PostgreSQL allows external connections:
-   ```bash
-   # postgresql.conf
-   listen_addresses = '*'
-   
-   # pg_hba.conf
-   host all all YOUR_APP_IP/32 md5
-   ```
-3. Ensure port 5432 is open in firewall
-
-### **Network Access Issues**
-- Frontend accessible at: `http://YOUR_IP:3000`
-- Backend API at: `http://YOUR_IP:5000`
-- Use `./setup.sh` to auto-configure network settings
+- CORS issues: set `ALLOW_ALL_ORIGINS=true` temporarily (demo only) or configure `ALLOWED_ORIGINS`
+- Socket connection loops: handled by server; check logs
+- 401s: token may have expired; re-login
 
 ## 🛠 Tech Stack
 
-- **Frontend**: React, Material-UI, Socket.IO Client
-- **Backend**: Node.js, Express, Socket.IO
-- **Database**: PostgreSQL
-- **Auth**: JWT with bcrypt
-- **Deployment**: Docker, Docker Compose
+- Frontend: React, Material-UI, Socket.IO Client
+- Backend: Node.js, Express, Socket.IO
+- Database: PostgreSQL
+- Auth: JWT with bcrypt
+- Deployment: Docker, Docker Compose, ngrok
 
 ## 📁 Project Structure
 
@@ -136,16 +136,3 @@ wechat-app/
 ├── deploy.sh         # Docker deployment
 └── README.md
 ```
-
-## 🔒 Security Features
-
-- JWT authentication with session management
-- Password hashing with bcrypt
-- CORS protection
-- Rate limiting
-- Input validation and sanitization
-- File upload restrictions
-
----
-
-**Need help?** Check the troubleshooting section above or review the setup logs.
