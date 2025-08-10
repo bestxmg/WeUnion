@@ -43,10 +43,15 @@ const ChatList = () => {
   const fetchConversations = async () => {
     try {
       const response = await api.get('/messages/conversations');
-      setConversations(response.data);
+      const data = Array.isArray(response.data) ? response.data : [];
+      setConversations(data);
+      if (!Array.isArray(response.data)) {
+        setError('Unexpected response when loading conversations');
+      }
     } catch (error) {
-      setError('Failed to load conversations');
+      setError(error.response?.data?.error || 'Failed to load conversations');
       console.error('Failed to fetch conversations:', error);
+      setConversations([]);
     } finally {
       setLoading(false);
     }
@@ -130,7 +135,7 @@ const ChatList = () => {
     );
   }
 
-  if (conversations.length === 0) {
+  if (!Array.isArray(conversations) || conversations.length === 0) {
     return (
       <Box 
         display="flex" 
