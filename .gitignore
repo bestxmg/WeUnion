@@ -11,6 +11,8 @@ coverage/
 # Caches
 .cache/
 **/.cache/
+.eslintcache
+**/.eslintcache
 .tmp/
 **/.tmp/
 .parcel-cache/
